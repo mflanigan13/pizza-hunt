@@ -1,61 +1,72 @@
-const { Schema, model, Types } = require('mongoose');
-const dateFormat = require('../utils/dateFormat');
+const { Comment, Pizza } = require('../models');
 
-const ReplySchema = new Schema(
-    {
-        // set custom id to avoid confusion with parent comment _id
-        replyId: {
-            type: Schema.Types.ObjectId,
-            default: () => new Types.ObjectId()
-        },
-        replyBody: {
-            type: String
-        },
-        writtenBy: {
-            type: String
-        },
-        createdAt: {
-            type: Date,
-            default: Date.now,
-            get: createdAtVal => dateFormat(createdAtVal)
-        }
+const commentController = {
+    // add comment to pizza
+    addComment({ params, body }, res) {
+        console.log(body);
+        Comment.create(body)
+            .then(({ _id }) => {
+                return Pizza.findOneAndUpdate(
+                    { _id: params.pizzaId },
+                    { $push: { comments: _id } },
+                    { new: true }
+                );
+            })
+            .then(dbPizzaData => {
+                if (!dbPizzaData) {
+                    res.status(404).json({ message: 'No pizza found with this id!' });
+                    return;
+                }
+                res.json(dbPizzaData);
+            })
+            .catch(err => res.json(err));
     },
-    {
-        toJSON: {
-            getters: true
-        }
-    }
-);
 
-const CommentSchema = new Schema(
-    {
-        writtenBy: {
-            type: String
-        },
-        commentBody: {
-            type: String
-        },
-        createdAt: {
-            type: Date,
-            default: Date.now,
-            get: createdAtVal => dateFormat(createdAtVal)
-        },
-        // use ReplySchema to validate data for a reply
-        replies: [ReplySchema]
+    // add reply to comment
+    addReply({ params, body }, res) {
+        Comment.findOneAndUpdate({ _id: params.commentId }, { $push: { replies: body } }, { new: true })
+            .then(dbPizzaData => {
+                if (!dbPizzaData) {
+                    res.status(404).json({ message: 'No pizza found with this id!' });
+                    return;
+                }
+                res.json(dbPizzaData);
+            })
+            .catch(err => res.json(err));
     },
-    {
-        toJSON: {
-            virtuals: true,
-            getters: true
-        },
-        id: false
+
+    // remove comment
+    removeComment({ params }, res) {
+        Comment.findOneAndDelete({ _id: params.commentId })
+            .then(deletedComment => {
+                if (!deletedComment) {
+                    return res.status(404).json({ message: 'No comment with this id!' });
+                }
+                return Pizza.findOneAndUpdate(
+                    { _id: params.pizzaId },
+                    { $pull: { comments: params.commentId } },
+                    { new: true }
+                );
+            })
+            .then(dbPizzaData => {
+                if (!dbPizzaData) {
+                    res.status(404).json({ message: 'No pizza found with this id!' });
+                    return;
+                }
+                res.json(dbPizzaData);
+            })
+            .catch(err => res.json(err));
+    },
+    // remove reply
+    removeReply({ params }, res) {
+        Comment.findOneAndUpdate(
+            { _id: params.commentId },
+            { $pull: { replies: { replyId: params.replyId } } },
+            { new: true }
+        )
+            .then(dbPizzaData => res.json(dbPizzaData))
+            .catch(err => res.json(err));
     }
-);
+};
 
-CommentSchema.virtual('replyCount').get(function () {
-    return this.replies.length;
-});
-
-const Comment = model('Comment', CommentSchema);
-
-module.exports = Comment;
+module.exports = commentController;
