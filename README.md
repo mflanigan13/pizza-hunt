@@ -38,9 +38,9 @@ Node.js, NPM, and MongoDB must be installed on your computer. <br />
 
 ## Links
 
-- **[Deployed App](x)**
-- **[GitHub Repo](x)**
-- **[GitHub profile](x)**
+- **[Deployed App](https://protected-reef-97981.herokuapp.com/)**
+- **[GitHub Repo](https://github.com/mflanigan13/pizza-hunt)**
+- **[GitHub profile](https://github.com/mflanigan13)**
 
 ## License
 
